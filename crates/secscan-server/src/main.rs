@@ -48,11 +48,16 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/verify", post(handle_verify))
         .layer(CorsLayer::permissive());
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let port: u16 = std::env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(3000);
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("\n=========================================================");
     println!(" SECSCAN WEB DASHBOARD & API SERVER");
     println!(" Powered by Rust Static Core + NVIDIA Nemotron on Nebius");
-    println!(" Listening at http://localhost:3000");
+    println!(" Listening at http://0.0.0.0:{}", port);
     println!("=========================================================\n");
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
