@@ -1,8 +1,42 @@
+use regex::Regex;
 use secscan_core::models::Finding;
 
 pub struct PromptBuilder;
 
 impl PromptBuilder {
+    /// Sanitizes and minimizes the source code context to prevent leaking secrets
+    /// and to avoid sending unnecessary repository lines to the model.
+    pub fn sanitize_and_minimize_context(full_context: &str, target_line: usize) -> String {
+        let lines: Vec<&str> = full_context.lines().collect();
+        if lines.is_empty() {
+            return String::new();
+        }
+
+        let total = lines.len();
+        // Safe 0-indexed bounds calculation
+        let target_idx = target_line.saturating_sub(1).min(total.saturating_sub(1));
+        let start_idx = target_idx.saturating_sub(15);
+        let end_idx = (target_idx + 16).min(total);
+
+        let window_lines = &lines[start_idx..end_idx];
+
+        // Regex for redacting hard-coded secrets / credentials
+        let secret_assign_re = Regex::new(
+            r#"(?i)(api[_-]?key|secret[_-]?key|jwt[_-]?secret|auth[_-]?token|password|private[_-]?key)\s*=\s*["'][^"']+["']"#
+        ).unwrap();
+        let token_prefix_re = Regex::new(r"(sk-[a-zA-Z0-9_\-]{8,}|ghp_[a-zA-Z0-9_\-]{8,})").unwrap();
+
+        let mut sanitized = Vec::new();
+        for (offset, line) in window_lines.iter().enumerate() {
+            let line_num = start_idx + offset + 1;
+            let mut sanitized_line = secret_assign_re.replace_all(line, "$1 = \"[REDACTED_SECRET]\"").to_string();
+            sanitized_line = token_prefix_re.replace_all(&sanitized_line, "[REDACTED_TOKEN]").to_string();
+            sanitized.push(format!("{:4} | {}", line_num, sanitized_line));
+        }
+
+        sanitized.join("\n")
+    }
+
     pub fn build_explanation_prompt(finding: &Finding, full_file_context: &str) -> (String, String) {
         let system_prompt = "You are NVIDIA Nemotron, a world-class AI security engineering agent. \
 You are integrated into an enterprise security analyzer powered by Nebius Token Factory. \
@@ -21,6 +55,9 @@ Output your analysis strictly in valid JSON format matching the schema requested
         if let Some(ref sink) = finding.sink {
             data_flow_desc.push_str(&format!("- SINK: Line {} -> {} ({})\n", sink.line, sink.variable, sink.description));
         }
+
+        // Minimize and redact context
+        let minimal_context = Self::sanitize_and_minimize_context(full_file_context, finding.line);
 
         let user_prompt = format!(
             r#"Analyze this security finding:
@@ -55,7 +92,7 @@ Respond with a JSON object with exactly these fields:
             file = finding.file_path,
             line = finding.line,
             data_flow = data_flow_desc,
-            context = full_file_context,
+            context = minimal_context,
         );
 
         (system_prompt, user_prompt)
@@ -73,6 +110,8 @@ CRITICAL INSTRUCTIONS:
 6. For secrets, read from os.getenv.
 7. For crypto/randomness, use hashlib.sha256 or secrets module.
 8. Output valid JSON only.".to_string();
+
+        let minimal_context = Self::sanitize_and_minimize_context(full_file_context, finding.line);
 
         let user_prompt = format!(
             r#"Generate a security patch for this finding:
@@ -100,7 +139,7 @@ Respond with a JSON object with exactly these fields:
             line = finding.line,
             framework = finding.target_framework,
             snippet = finding.code_snippet,
-            context = full_file_context,
+            context = minimal_context,
         );
 
         (system_prompt, user_prompt)

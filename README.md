@@ -106,7 +106,16 @@ Tested against the curated benchmark suite included in this repository:
 ### Prerequisites
 * Rust 1.80+ (`cargo`)
 * Python 3.10+
-* (Optional) Nebius Token Factory API Key (`export NEBIUS_API_KEY="sk-..."`)
+* (Optional) Nebius Token Factory API Key (`export NEBIUS_API_KEY="sk-..."` or set in `.env`)
+
+### 0. Environment Setup
+```bash
+# Copy example configuration
+cp .env.example .env
+
+# Set your Nebius Token Factory API key (server-side only)
+# NEBIUS_API_KEY=your_key_here
+```
 
 ### 1. Run the Web Dashboard
 ```bash
@@ -131,6 +140,9 @@ cargo run --bin secscan -- fix test-corpus/vulnerable-shop --rule SEC-001
 # Autonomous Agent verification loop (Sandbox apply -> pytest -> rescan)
 cargo run --bin secscan -- verify test-corpus/vulnerable-shop --rule SEC-001
 ```
+
+### 3. Production Deployment
+Refer to the comprehensive [Deployment Guide](docs/deployment.md) for Docker, Docker Compose, systemd, and cloud hosting instructions.
 
 ---
 

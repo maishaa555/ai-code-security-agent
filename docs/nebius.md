@@ -43,7 +43,8 @@ Unlike shallow security tools that feed raw code to an LLM and ask "Is this secu
 
 ## 3. Configuration & Environment Variables
 
-To connect to live Nebius Token Factory inference:
+You can configure environment variables via your shell or by creating a `.env` file in the project root (see `.env.example`):
+
 ```bash
 # Set your Nebius Token Factory API Key
 export NEBIUS_API_KEY="your-token-factory-key"
@@ -52,6 +53,14 @@ export NEBIUS_API_KEY="your-token-factory-key"
 export NEBIUS_BASE_URL="https://api.tokenfactory.nebius.ai/v1"
 export NEBIUS_MODEL="nvidia/llama-3.1-nemotron-70b-instruct"
 ```
+
+Both `secscan-server` and `secscan-cli` automatically load `.env` at startup using `dotenvy`.
+
+### Secret Redaction & Token Minimization
+SecScan AI minimizes the code transmitted to Nebius:
+1. Only a focused 30-line code window around the detected vulnerability is sent, rather than entire source files.
+2. Hardcoded API keys, bearer tokens, passwords, and private keys in the code context are automatically redacted with `[REDACTED_SECRET]` and `[REDACTED_TOKEN]` before leaving the server.
+3. Untrusted code context is encapsulated inside `<untrusted_evidence_context>` tags to prevent prompt injection.
 
 If `NEBIUS_API_KEY` is omitted, SecScan AI automatically falls back to an offline deterministic engine, allowing judges and developers to test all agent workflows without external network dependencies.
 

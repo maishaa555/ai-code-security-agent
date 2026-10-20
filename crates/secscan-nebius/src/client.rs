@@ -4,7 +4,7 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use secscan_core::models::Finding;
 use serde_json::{json, Value};
 use std::env;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 pub struct NebiusClient {
     api_key: Option<String>,
@@ -15,23 +15,65 @@ pub struct NebiusClient {
 
 impl NebiusClient {
     pub fn new() -> Self {
-        let api_key = env::var("NEBIUS_API_KEY").ok().filter(|k| !k.trim().is_empty());
+        let api_key = env::var("NEBIUS_API_KEY")
+            .ok()
+            .map(|k| k.trim().to_string())
+            .filter(|k| !k.is_empty() && k != "your_nebius_api_key_here");
+
         let base_url = env::var("NEBIUS_BASE_URL")
-            .unwrap_or_else(|_| "https://api.tokenfactory.nebius.ai/v1".to_string());
+            .unwrap_or_else(|_| "https://api.tokenfactory.nebius.ai/v1".to_string())
+            .trim()
+            .trim_end_matches('/')
+            .to_string();
+
         let model = env::var("NEBIUS_MODEL")
-            .unwrap_or_else(|_| "nvidia/llama-3.1-nemotron-70b-instruct".to_string());
+            .unwrap_or_else(|_| "nvidia/llama-3.1-nemotron-70b-instruct".to_string())
+            .trim()
+            .to_string();
+
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(30))
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
 
         Self {
             api_key,
             base_url,
             model,
-            client: reqwest::Client::new(),
+            client,
         }
     }
 
     pub fn with_api_key(mut self, key: &str) -> Self {
-        self.api_key = Some(key.to_string());
+        let trimmed = key.trim();
+        if trimmed.is_empty() || trimmed == "your_nebius_api_key_here" {
+            self.api_key = None;
+        } else {
+            self.api_key = Some(trimmed.to_string());
+        }
         self
+    }
+
+    pub fn with_base_url(mut self, url: &str) -> Self {
+        self.base_url = url.trim().trim_end_matches('/').to_string();
+        self
+    }
+
+    pub fn with_model(mut self, model: &str) -> Self {
+        self.model = model.trim().to_string();
+        self
+    }
+
+    pub fn is_live_configured(&self) -> bool {
+        self.api_key.is_some()
+    }
+
+    pub fn get_model(&self) -> &str {
+        &self.model
+    }
+
+    pub fn get_base_url(&self) -> &str {
+        &self.base_url
     }
 
     pub async fn explain_finding(
@@ -44,23 +86,24 @@ impl NebiusClient {
             PromptBuilder::build_explanation_prompt(finding, file_context);
 
         if let Some(ref key) = self.api_key {
-            // Live Nebius Token Factory call
+            // Live Nebius Token Factory inference
             let res = self.call_nebius_chat(&system_prompt, &user_prompt, key).await;
             match res {
                 Ok((content, input_tokens, output_tokens)) => {
                     let duration = start.elapsed().as_millis();
-                    let parsed: Value = serde_json::from_str(&content)
-                        .unwrap_or_else(|_| json!({ "summary": content }));
+                    let cleaned = Self::extract_json_block(&content);
+                    let parsed: Value = serde_json::from_str(cleaned)
+                        .map_err(|e| format!("Failed to parse Nemotron JSON response: {}. Raw content: {}", e, content))?;
 
                     return Ok(AiExplanation {
                         finding_id: finding.id.clone(),
                         summary: parsed["summary"].as_str().unwrap_or("Vulnerability detected.").to_string(),
-                        root_cause: parsed["root_cause"].as_str().unwrap_or("Tainted data reaches sink.").to_string(),
-                        attack_vector: parsed["attack_vector"].as_str().unwrap_or("Attacker input injected into sensitive execution.").to_string(),
-                        business_impact: parsed["business_impact"].as_str().unwrap_or("Unauthorized data access or execution.").to_string(),
+                        root_cause: parsed["root_cause"].as_str().unwrap_or("Tainted data reaches execution sink.").to_string(),
+                        attack_vector: parsed["attack_vector"].as_str().unwrap_or("Attacker input injected into sensitive execution path.").to_string(),
+                        business_impact: parsed["business_impact"].as_str().unwrap_or("Unauthorized data access or arbitrary code execution.").to_string(),
                         recommended_action: parsed["recommended_action"].as_str().unwrap_or(&finding.recommended_fix).to_string(),
                         telemetry: NebiusTelemetry {
-                            provider: "Nebius Token Factory".to_string(),
+                            provider: "Nebius Token Factory (NVIDIA Nemotron)".to_string(),
                             model: self.model.clone(),
                             latency_ms: duration,
                             input_tokens,
@@ -70,12 +113,12 @@ impl NebiusClient {
                     });
                 }
                 Err(e) => {
-                    eprintln!("Nebius Token Factory API call failed: {}. Falling back to offline engine.", e);
+                    return Err(format!("Nebius Token Factory inference error: {}", e));
                 }
             }
         }
 
-        // High-fidelity fallback / mock engine
+        // Demonstration / Offline engine when NEBIUS_API_KEY is not configured
         let duration = start.elapsed().as_millis().max(120);
         Ok(self.mock_explanation(finding, duration))
     }
@@ -93,34 +136,36 @@ impl NebiusClient {
             match res {
                 Ok((content, in_tok, out_tok)) => {
                     let duration = start.elapsed().as_millis();
-                    if let Ok(parsed) = serde_json::from_str::<Value>(&content) {
-                        let original = parsed["original_code"].as_str().unwrap_or("").to_string();
-                        let remediated = parsed["remediated_code"].as_str().unwrap_or("").to_string();
-                        let diff = parsed["unified_diff"].as_str().unwrap_or("").to_string();
-                        let expl = parsed["explanation"].as_str().unwrap_or("Remediation generated by Nemotron.").to_string();
+                    let cleaned = Self::extract_json_block(&content);
+                    let parsed: Value = serde_json::from_str(cleaned)
+                        .map_err(|e| format!("Failed to parse Nemotron patch JSON: {}. Raw content: {}", e, content))?;
 
-                        let safe = Self::verify_patch_safety(&remediated);
-                        return Ok(AiPatch {
-                            finding_id: finding.id.clone(),
-                            file_path: finding.file_path.clone(),
-                            original_code: original,
-                            remediated_code: remediated,
-                            unified_diff: diff,
-                            explanation: expl,
-                            safety_check_passed: safe,
-                            telemetry: NebiusTelemetry {
-                                provider: "Nebius Token Factory".to_string(),
-                                model: self.model.clone(),
-                                latency_ms: duration,
-                                input_tokens: in_tok,
-                                output_tokens: out_tok,
-                                is_mock: false,
-                            },
-                        });
-                    }
+                    let original = parsed["original_code"].as_str().unwrap_or("").to_string();
+                    let remediated = parsed["remediated_code"].as_str().unwrap_or("").to_string();
+                    let diff = parsed["unified_diff"].as_str().unwrap_or("").to_string();
+                    let expl = parsed["explanation"].as_str().unwrap_or("Remediation generated by NVIDIA Nemotron.").to_string();
+
+                    let safe = Self::verify_patch_safety(&remediated);
+                    return Ok(AiPatch {
+                        finding_id: finding.id.clone(),
+                        file_path: finding.file_path.clone(),
+                        original_code: original,
+                        remediated_code: remediated,
+                        unified_diff: diff,
+                        explanation: expl,
+                        safety_check_passed: safe,
+                        telemetry: NebiusTelemetry {
+                            provider: "Nebius Token Factory (NVIDIA Nemotron)".to_string(),
+                            model: self.model.clone(),
+                            latency_ms: duration,
+                            input_tokens: in_tok,
+                            output_tokens: out_tok,
+                            is_mock: false,
+                        },
+                    });
                 }
                 Err(e) => {
-                    eprintln!("Nebius Token Factory API call failed: {}. Falling back to offline patch engine.", e);
+                    return Err(format!("Nebius Token Factory patch generation error: {}", e));
                 }
             }
         }
@@ -135,14 +180,14 @@ impl NebiusClient {
         user_prompt: &str,
         api_key: &str,
     ) -> Result<(String, u32, u32), String> {
-        let endpoint = format!("{}/chat/completions", self.base_url.trim_end_matches('/'));
+        let endpoint = format!("{}/chat/completions", self.base_url);
 
         let mut headers = HeaderMap::new();
         headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
         headers.insert(
             AUTHORIZATION,
             HeaderValue::from_str(&format!("Bearer {}", api_key))
-                .map_err(|e| e.to_string())?,
+                .map_err(|e| format!("Invalid API key header format: {:?}", e))?,
         );
 
         let body = json!({
@@ -162,18 +207,43 @@ impl NebiusClient {
             .json(&body)
             .send()
             .await
-            .map_err(|e| format!("HTTP request failed: {:?}", e))?;
+            .map_err(|e| {
+                if e.is_timeout() {
+                    "Request timed out after 30 seconds connecting to Nebius Token Factory.".to_string()
+                } else if e.is_connect() {
+                    format!("Failed to connect to Nebius endpoint '{}'. Please check network connectivity or NEBIUS_BASE_URL.", self.base_url)
+                } else {
+                    format!("HTTP request failed: {:?}", e)
+                }
+            })?;
 
-        if !resp.status().is_success() {
-            let status = resp.status();
+        let status = resp.status();
+        if !status.is_success() {
             let err_body = resp.text().await.unwrap_or_default();
-            return Err(format!("Nebius Token Factory error {}: {}", status, err_body));
+            return match status.as_u16() {
+                401 => Err(format!(
+                    "Authentication failed (HTTP 401). Please verify your NEBIUS_API_KEY in .env. Details: {}",
+                    err_body
+                )),
+                404 => Err(format!(
+                    "Endpoint or model '{}' not found on Nebius (HTTP 404). Verify NEBIUS_MODEL and NEBIUS_BASE_URL. Details: {}",
+                    self.model, err_body
+                )),
+                429 => Err(format!(
+                    "Nebius Token Factory rate limit exceeded (HTTP 429). Please pause and retry. Details: {}",
+                    err_body
+                )),
+                _ => Err(format!(
+                    "Nebius Token Factory returned error HTTP {}: {}",
+                    status, err_body
+                )),
+            };
         }
 
         let json_resp: Value = resp
             .json()
             .await
-            .map_err(|e| format!("Failed to parse JSON response: {:?}", e))?;
+            .map_err(|e| format!("Failed to parse JSON response from Nebius: {:?}", e))?;
 
         let content = json_resp["choices"][0]["message"]["content"]
             .as_str()
@@ -186,8 +256,30 @@ impl NebiusClient {
         Ok((content, in_tok, out_tok))
     }
 
+    /// Strips markdown code block wrappers (e.g. ```json ... ```) if present
+    pub fn extract_json_block(text: &str) -> &str {
+        let trimmed = text.trim();
+        if trimmed.starts_with("```json") && trimmed.ends_with("```") {
+            let inner = &trimmed[7..trimmed.len() - 3];
+            inner.trim()
+        } else if trimmed.starts_with("```") && trimmed.ends_with("```") {
+            let inner = &trimmed[3..trimmed.len() - 3];
+            inner.trim()
+        } else {
+            trimmed
+        }
+    }
+
     pub fn verify_patch_safety(remediated_code: &str) -> bool {
-        let forbidden = ["__import__", "eval(", "exec(", "os.system(", "subprocess.Popen(", "pty.spawn"];
+        let forbidden = [
+            "__import__",
+            "eval(",
+            "exec(",
+            "os.system(",
+            "subprocess.Popen(",
+            "pty.spawn",
+            "socket.socket",
+        ];
         for bad in &forbidden {
             if remediated_code.contains(bad) {
                 return false;
@@ -250,12 +342,12 @@ impl NebiusClient {
             business_impact: impact,
             recommended_action: finding.recommended_fix.clone(),
             telemetry: NebiusTelemetry {
-                provider: "Nebius Token Factory (NVIDIA Nemotron)".to_string(),
+                provider: "Nebius Token Factory (Demonstration Engine)".to_string(),
                 model: self.model.clone(),
                 latency_ms,
                 input_tokens: 342,
                 output_tokens: 188,
-                is_mock: self.api_key.is_none(),
+                is_mock: true,
             },
         }
     }
@@ -315,12 +407,12 @@ impl NebiusClient {
             explanation: expl,
             safety_check_passed: true,
             telemetry: NebiusTelemetry {
-                provider: "Nebius Token Factory (NVIDIA Nemotron)".to_string(),
+                provider: "Nebius Token Factory (Demonstration Engine)".to_string(),
                 model: self.model.clone(),
                 latency_ms,
                 input_tokens: 410,
                 output_tokens: 220,
-                is_mock: self.api_key.is_none(),
+                is_mock: true,
             },
         }
     }

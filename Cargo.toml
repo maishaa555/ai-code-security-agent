@@ -21,3 +21,4 @@ tree-sitter-python = "0.20"
 regex = "1.10"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
+dotenvy = "0.15"

@@ -35,6 +35,7 @@ struct HealthResponse {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    dotenvy::dotenv().ok();
     tracing_subscriber::fmt::init();
 
     let app = Router::new()
