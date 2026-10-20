@@ -39,6 +39,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/", get(serve_dashboard))
+        .route("/assets/logo.png", get(serve_logo))
         .route("/api/health", get(health_check))
         .route("/api/scan", post(handle_scan))
         .route("/api/explain", post(handle_explain))
@@ -162,4 +163,11 @@ async fn handle_verify(Json(req): Json<ActionRequest>) -> Result<impl IntoRespon
 
 async fn serve_dashboard() -> Html<&'static str> {
     Html(include_str!("dashboard.html"))
+}
+
+async fn serve_logo() -> impl IntoResponse {
+    (
+        [(axum::http::header::CONTENT_TYPE, "image/png")],
+        include_bytes!("logo.png").as_slice(),
+    )
 }

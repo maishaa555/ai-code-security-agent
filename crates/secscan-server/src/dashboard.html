@@ -1,18 +1,34 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SecScan AI — Autonomous Security Engineering Agent</title>
+  <title>SECSCAN AI — Deterministic Security Analysis & AI Remediation</title>
+  <link rel="icon" type="image/png" href="/assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+          },
           colors: {
-            brand: { 50: '#f0fdf4', 500: '#22c55e', 600: '#16a34a', 700: '#15803d' },
-            nebius: { 500: '#7c3aed', 600: '#6d28d9' }
+            navy: '#112250',
+            sapphire: '#3B507D',
+            taupe: '#BEB7A7',
+            champagne: '#E7E2CE',
+            ivory: '#F5F4F0',
+            // Restrained semantic palette
+            crit: { text: '#9E2A2B', bg: '#FBF0F0', border: '#F1D3D3' },
+            high: { text: '#C85A32', bg: '#FDF4F0', border: '#F6DDD3' },
+            med: { text: '#9A6D1F', bg: '#FAF6EE', border: '#EFE4D0' },
+            low: { text: '#3B507D', bg: '#F1F4F9', border: '#DDE4F0' },
+            pass: { text: '#2A7B55', bg: '#EFF7F3', border: '#D3EBDD' }
           }
         }
       }
@@ -20,259 +36,591 @@
   </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    @keyframes pulse-subtle { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-    .pulse-live { animation: pulse-subtle 2s infinite ease-in-out; }
-    pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    body { background-color: #F5F4F0; color: #112250; font-family: 'Inter', sans-serif; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #F5F4F0; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #BEB7A7; border-radius: 9999px; }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans antialiased">
+<body class="min-h-screen flex antialiased selection:bg-champagne selection:text-navy">
 
-  <!-- Header -->
-  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
-    <div class="flex items-center space-x-3">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-        <i class="fa-solid fa-shield-halved text-slate-950 text-xl font-bold"></i>
-      </div>
-      <div>
-        <div class="flex items-center space-x-2">
-          <span class="text-lg font-bold tracking-tight">SECSCAN AI</span>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">Rust Core v1.0</span>
+  <!-- Desktop Sidebar Navigation -->
+  <aside class="w-64 bg-white border-r border-[#E2DDD1] flex flex-col justify-between shrink-0 h-screen sticky top-0 z-40 transition-all duration-200">
+    <div>
+      <!-- Brand & Illustrated Cat Logo -->
+      <div class="px-5 py-5 border-b border-[#E2DDD1] flex items-center space-x-3.5">
+        <img src="/assets/logo.png" alt="SECSCAN AI Cat Logo" class="w-11 h-11 object-contain rounded-lg">
+        <div>
+          <h1 class="text-base font-bold text-navy tracking-tight leading-none">SECSCAN AI</h1>
+          <p class="text-[11px] text-sapphire mt-1 font-medium leading-snug">Deterministic Security Agent</p>
         </div>
-        <p class="text-xs text-slate-400">Deterministic Static Taint Engine + NVIDIA Nemotron on Nebius Token Factory</p>
       </div>
+
+      <!-- Navigation Links -->
+      <nav class="p-3 space-y-1">
+        <button onclick="navigateTo('overview')" id="nav-overview" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-navy bg-champagne/50 border-l-2 border-sapphire transition">
+          <i class="fa-solid fa-gauge-high w-4 text-sapphire"></i>
+          <span>Overview</span>
+        </button>
+
+        <button onclick="navigateTo('repositories')" id="nav-repositories" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-[#7A7568] hover:text-navy hover:bg-[#F5F4F0] border-l-2 border-transparent transition">
+          <i class="fa-solid fa-folder-tree w-4"></i>
+          <span>Repositories</span>
+        </button>
+
+        <button onclick="navigateTo('findings')" id="nav-findings" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-[#7A7568] hover:text-navy hover:bg-[#F5F4F0] border-l-2 border-transparent transition">
+          <i class="fa-solid fa-shield-halved w-4"></i>
+          <span>Security Findings</span>
+          <span id="navFindingsBadge" class="ml-auto text-[11px] px-1.5 py-0.5 rounded-full bg-champagne text-navy font-semibold">8</span>
+        </button>
+
+        <button onclick="navigateTo('history')" id="nav-history" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-[#7A7568] hover:text-navy hover:bg-[#F5F4F0] border-l-2 border-transparent transition">
+          <i class="fa-solid fa-clock-rotate-left w-4"></i>
+          <span>Scan History</span>
+        </button>
+
+        <button onclick="navigateTo('settings')" id="nav-settings" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-[#7A7568] hover:text-navy hover:bg-[#F5F4F0] border-l-2 border-transparent transition">
+          <i class="fa-solid fa-sliders w-4"></i>
+          <span>Settings</span>
+        </button>
+      </nav>
     </div>
 
-    <!-- Live Telemetry Status Badge -->
-    <div class="flex items-center space-x-4">
-      <div class="hidden md:flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 text-xs">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-live"></span>
-        <span class="text-slate-300 font-medium">Inference:</span>
-        <span class="text-purple-300 font-semibold">Nebius Token Factory</span>
-        <span class="text-slate-500">|</span>
-        <span class="text-slate-400">nvidia/llama-3.1-nemotron-70b</span>
+    <!-- Bottom Status Panel (Understated) -->
+    <div class="p-4 border-t border-[#E2DDD1] bg-[#FAFAF8] text-xs space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-[#7A7568] font-medium">AI Reasoning</span>
+        <span class="flex items-center space-x-1.5 text-sapphire font-semibold">
+          <span class="w-2 h-2 rounded-full bg-pass-text inline-block"></span>
+          <span>Nebius Active</span>
+        </span>
+      </div>
+      <p class="text-[11px] text-[#8C8678] truncate" title="nvidia/llama-3.1-nemotron-70b-instruct">Model: Nemotron-70B</p>
+      <p class="text-[11px] text-[#8C8678]">Engine: Rust Tree-Sitter Core</p>
+    </div>
+  </aside>
+
+  <!-- Main Application Body -->
+  <div class="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto custom-scroll">
+
+    <!-- Top Application Bar -->
+    <header class="bg-white border-b border-[#E2DDD1] px-8 py-3.5 flex items-center justify-between sticky top-0 z-30">
+      <div class="flex items-center space-x-3">
+        <h2 id="headerPageTitle" class="text-base font-semibold text-navy">Overview</h2>
+        <span class="text-taupe">/</span>
+        <span id="headerRepoBadge" class="text-xs px-2.5 py-1 rounded bg-ivory text-sapphire border border-[#E2DDD1] font-mono">test-corpus/vulnerable-shop</span>
       </div>
 
-      <!-- Scan Target Input -->
-      <div class="flex items-center space-x-2">
-        <input id="repoPath" type="text" value="test-corpus/vulnerable-shop" 
-               class="bg-slate-900 border border-slate-700 text-xs px-3 py-2 rounded-lg w-64 focus:outline-none focus:border-emerald-500 text-slate-200" placeholder="Repository path...">
-        <button id="scanBtn" onclick="runScan()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-semibold text-xs px-4 py-2 rounded-lg flex items-center space-x-2 transition shadow-lg shadow-emerald-600/20">
-          <i class="fa-solid fa-bolt"></i>
+      <div class="flex items-center space-x-3">
+        <button onclick="triggerQuickScan()" id="btnQuickScan" class="bg-navy hover:bg-sapphire text-white text-xs px-4 py-2 rounded-lg font-medium transition flex items-center space-x-2 shadow-sm">
+          <i class="fa-solid fa-rotate w-3.5"></i>
           <span>Scan Repository</span>
         </button>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <!-- Main Content -->
-  <main class="flex-1 p-6 space-y-6 max-w-7xl mx-auto w-full">
+    <!-- Page Content Container -->
+    <main class="p-8 max-w-6xl w-full mx-auto space-y-8 flex-1">
 
-    <!-- KPI Summary Row -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <!-- Security Health Score -->
-      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+      <!-- ========================================== -->
+      <!-- VIEW 1: OVERVIEW PAGE                      -->
+      <!-- ========================================== -->
+      <section id="view-overview" class="space-y-8">
+        
+        <!-- Welcome Hero -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-[#E2DDD1]">
+          <div>
+            <h3 class="text-xl font-bold text-navy tracking-tight">Good morning</h3>
+            <p class="text-sm text-[#7A7568] mt-1">Review your repository's security posture and resolve the issues that matter most.</p>
+          </div>
+          <div>
+            <button onclick="navigateTo('repositories')" class="bg-sapphire hover:bg-navy text-white text-xs px-4 py-2.5 rounded-lg font-medium transition flex items-center space-x-2">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <span>New Repository Scan</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Compact Security Summary (3 Core Cards) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          
+          <!-- Card 1: Security Score -->
+          <div class="bg-white border border-[#E2DDD1] rounded-xl p-5 shadow-sm space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-[#7A7568] uppercase tracking-wider">Security Score</span>
+              <span id="ovScoreGatePill" class="text-xs px-2 py-0.5 rounded font-medium bg-crit-bg text-crit-text border border-crit-border">Gate: Blocked</span>
+            </div>
+            <div class="flex items-baseline space-x-2">
+              <span id="ovScoreVal" class="text-3xl font-extrabold text-navy">0</span>
+              <span class="text-xs text-[#7A7568]">/ 100</span>
+            </div>
+            <p class="text-xs text-[#7A7568] leading-relaxed pt-1 border-t border-[#F0ECE1]">
+              Deterministic score derived from 100 base minus severity penalties.
+            </p>
+          </div>
+
+          <!-- Card 2: Open Findings -->
+          <div class="bg-white border border-[#E2DDD1] rounded-xl p-5 shadow-sm space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-[#7A7568] uppercase tracking-wider">Open Findings</span>
+              <span id="ovFindingsTotal" class="text-xs font-semibold text-navy">8 Total</span>
+            </div>
+            <!-- Clean Severity Breakdown -->
+            <div class="flex items-center space-x-2 pt-1 text-xs font-medium">
+              <span class="px-2 py-1 rounded bg-crit-bg text-crit-text border border-crit-border" id="ovCrit">1 Critical</span>
+              <span class="px-2 py-1 rounded bg-high-bg text-high-text border border-high-border" id="ovHigh">5 High</span>
+              <span class="px-2 py-1 rounded bg-med-bg text-med-text border border-med-border" id="ovMed">2 Medium</span>
+              <span class="px-2 py-1 rounded bg-low-bg text-low-text border border-low-border" id="ovLow">0 Low</span>
+            </div>
+            <p class="text-xs text-[#7A7568] leading-relaxed pt-2 border-t border-[#F0ECE1]">
+              Discovered via Rust AST Concrete Syntax Tree analysis.
+            </p>
+          </div>
+
+          <!-- Card 3: Latest Scan Status -->
+          <div class="bg-white border border-[#E2DDD1] rounded-xl p-5 shadow-sm space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-[#7A7568] uppercase tracking-wider">Analysis Engine</span>
+              <span class="text-xs text-pass-text font-semibold flex items-center space-x-1">
+                <i class="fa-solid fa-bolt"></i>
+                <span id="ovDuration">16ms</span>
+              </span>
+            </div>
+            <div class="flex items-baseline space-x-1">
+              <span class="text-lg font-bold text-navy" id="ovFilesLOC">3 files · 137 LOC</span>
+            </div>
+            <p class="text-xs text-[#7A7568] leading-relaxed pt-1 border-t border-[#F0ECE1]">
+              Intra-procedural taint analysis with 0.0% false positive benchmark.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Priority Findings (Top 3 Unresolved) -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-base font-semibold text-navy">Priority Findings</h4>
+              <p class="text-xs text-[#7A7568]">High-impact issues requiring developer remediation.</p>
+            </div>
+            <button onclick="navigateTo('findings')" class="text-xs font-semibold text-sapphire hover:text-navy transition flex items-center space-x-1">
+              <span>View all findings</span>
+              <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </button>
+          </div>
+
+          <div id="overviewPriorityList" class="space-y-3">
+            <!-- Dynamically populated top 3 findings -->
+          </div>
+        </div>
+
+        <!-- Recent Scans Table -->
+        <div class="space-y-3 pt-2">
+          <h4 class="text-base font-semibold text-navy">Recent Scans</h4>
+          <div class="bg-white border border-[#E2DDD1] rounded-xl overflow-hidden shadow-sm">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-[#FAFAF8] border-b border-[#E2DDD1] text-[#7A7568] font-semibold uppercase tracking-wider">
+                <tr>
+                  <th class="px-5 py-3">Repository</th>
+                  <th class="px-5 py-3">Timestamp</th>
+                  <th class="px-5 py-3">Findings</th>
+                  <th class="px-5 py-3">Security Score</th>
+                  <th class="px-5 py-3">Status</th>
+                  <th class="px-5 py-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody id="overviewRecentScansTbody" class="divide-y divide-[#F0ECE1] text-navy">
+                <!-- Dynamically populated recent scans -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+
+      <!-- ========================================== -->
+      <!-- VIEW 2: REPOSITORIES / SCAN WORKFLOW       -->
+      <!-- ========================================== -->
+      <section id="view-repositories" class="hidden space-y-6">
         <div>
-          <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Security Health</p>
-          <div class="flex items-baseline space-x-2 mt-1">
-            <span id="scoreVal" class="text-3xl font-extrabold text-red-500">0</span>
-            <span class="text-xs text-slate-500">/ 100</span>
+          <h3 class="text-xl font-bold text-navy tracking-tight">Repository Security Analysis</h3>
+          <p class="text-sm text-[#7A7568] mt-1">Select or configure a repository path to execute deterministic AST & taint scanning.</p>
+        </div>
+
+        <!-- Scan Configuration Card -->
+        <div class="bg-white border border-[#E2DDD1] rounded-xl p-6 shadow-sm space-y-5">
+          <div class="space-y-2">
+            <label class="text-xs font-semibold uppercase text-navy tracking-wider">Repository Path</label>
+            <div class="flex items-center space-x-3">
+              <input type="text" id="scanInputPath" value="test-corpus/vulnerable-shop" 
+                     class="flex-1 bg-[#FAFAF8] border border-[#E2DDD1] rounded-lg px-4 py-2.5 text-xs text-navy font-mono focus:outline-none focus:border-sapphire">
+              <button onclick="triggerDedicatedScan()" id="btnStartScan" class="bg-navy hover:bg-sapphire text-white text-xs px-5 py-2.5 rounded-lg font-medium transition flex items-center space-x-2 shrink-0 shadow-sm">
+                <i class="fa-solid fa-play text-[10px]"></i>
+                <span>Start Security Scan</span>
+              </button>
+            </div>
           </div>
-          <p id="scoreLabel" class="text-xs text-red-400 mt-1">Security Gate: FAILED</p>
+
+          <!-- Quick Presets -->
+          <div class="flex items-center space-x-2 text-xs text-[#7A7568]">
+            <span>Preset targets:</span>
+            <button onclick="setScanPreset('test-corpus/vulnerable-shop')" class="px-2.5 py-1 rounded bg-champagne/40 hover:bg-champagne text-navy border border-[#D8D1C2] transition font-medium">Vulnerable Shop (Demo Suite)</button>
+            <button onclick="setScanPreset('test-corpus/secure-shop')" class="px-2.5 py-1 rounded bg-champagne/40 hover:bg-champagne text-navy border border-[#D8D1C2] transition font-medium">Secure Shop (Reference Hardened)</button>
+          </div>
+
+          <!-- Scan Progress / Status Box -->
+          <div id="scanFeedbackBox" class="hidden p-4 rounded-lg bg-[#FAFAF8] border border-[#E2DDD1] text-xs space-y-2">
+            <div class="flex items-center space-x-2 text-navy font-semibold">
+              <i class="fa-solid fa-circle-check text-pass-text"></i>
+              <span id="scanFeedbackTitle">Scan completed successfully.</span>
+            </div>
+            <p class="text-[#7A7568]" id="scanFeedbackBody">Discovered 8 security findings in 16ms across 3 files.</p>
+          </div>
         </div>
-        <div id="scoreRing" class="w-12 h-12 rounded-full border-4 border-red-500/40 flex items-center justify-center text-red-400 text-sm font-bold">
-          !
+
+        <!-- Repository Details Card -->
+        <div class="bg-white border border-[#E2DDD1] rounded-xl p-6 shadow-sm space-y-4">
+          <div class="flex items-center justify-between border-b border-[#F0ECE1] pb-3">
+            <h4 class="font-semibold text-sm text-navy">Active Target Specifications</h4>
+            <span class="text-xs px-2.5 py-0.5 rounded bg-champagne text-navy font-medium">CST Verified</span>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+            <div>
+              <span class="text-[#7A7568] block">Parser Engine</span>
+              <span class="font-semibold text-navy mt-0.5 block">tree-sitter-python</span>
+            </div>
+            <div>
+              <span class="text-[#7A7568] block">Data-Flow Graph</span>
+              <span class="font-semibold text-navy mt-0.5 block">Intra-procedural VPG</span>
+            </div>
+            <div>
+              <span class="text-[#7A7568] block">Export Formats</span>
+              <span class="font-semibold text-navy mt-0.5 block">SARIF 2.1.0 & JSON</span>
+            </div>
+            <div>
+              <span class="text-[#7A7568] block">Test Suite</span>
+              <span class="font-semibold text-navy mt-0.5 block">Python unittest</span>
+            </div>
+          </div>
         </div>
+      </section>
+
+
+      <!-- ========================================== -->
+      <!-- VIEW 3: SECURITY FINDINGS & INSPECTOR      -->
+      <!-- ========================================== -->
+      <section id="view-findings" class="hidden space-y-6">
+        
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-xl font-bold text-navy tracking-tight">Security Findings</h3>
+            <p class="text-sm text-[#7A7568] mt-1">Review deterministic evidence, AI reasoning, and validated remediations.</p>
+          </div>
+
+          <!-- Filter / Search Row -->
+          <div class="flex items-center space-x-2">
+            <input type="text" id="findingSearchInput" oninput="filterFindings()" placeholder="Filter by rule or file..." 
+                   class="bg-white border border-[#E2DDD1] rounded-lg px-3 py-1.5 text-xs text-navy focus:outline-none focus:border-sapphire w-56">
+            <select id="severitySelectFilter" onchange="filterFindings()" class="bg-white border border-[#E2DDD1] rounded-lg px-3 py-1.5 text-xs text-navy focus:outline-none focus:border-sapphire">
+              <option value="ALL">All Severities</option>
+              <option value="CRITICAL">Critical</option>
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LOW">Low</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Clean Findings Table / List -->
+        <div class="bg-white border border-[#E2DDD1] rounded-xl overflow-hidden shadow-sm">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-[#FAFAF8] border-b border-[#E2DDD1] text-[#7A7568] font-semibold uppercase tracking-wider">
+              <tr>
+                <th class="px-5 py-3">Severity</th>
+                <th class="px-5 py-3">Vulnerability</th>
+                <th class="px-5 py-3">Rule ID</th>
+                <th class="px-5 py-3">Location</th>
+                <th class="px-5 py-3">Confidence</th>
+                <th class="px-5 py-3">Taint Path</th>
+                <th class="px-5 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="findingsTableTbody" class="divide-y divide-[#F0ECE1] text-navy">
+              <!-- Dynamically populated findings -->
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+
+
+      <!-- ========================================== -->
+      <!-- VIEW 4: SCAN HISTORY                       -->
+      <!-- ========================================== -->
+      <section id="view-history" class="hidden space-y-6">
+        <div>
+          <h3 class="text-xl font-bold text-navy tracking-tight">Scan History</h3>
+          <p class="text-sm text-[#7A7568] mt-1">Audit log of deterministic static analysis executions and security gates.</p>
+        </div>
+
+        <div class="bg-white border border-[#E2DDD1] rounded-xl overflow-hidden shadow-sm">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-[#FAFAF8] border-b border-[#E2DDD1] text-[#7A7568] font-semibold uppercase tracking-wider">
+              <tr>
+                <th class="px-5 py-3">Repository</th>
+                <th class="px-5 py-3">Scan Date</th>
+                <th class="px-5 py-3">Security Score</th>
+                <th class="px-5 py-3">Findings</th>
+                <th class="px-5 py-3">Duration</th>
+                <th class="px-5 py-3">Security Gate</th>
+                <th class="px-5 py-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="scanHistoryTableTbody" class="divide-y divide-[#F0ECE1] text-navy">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+
+      <!-- ========================================== -->
+      <!-- VIEW 5: SETTINGS                           -->
+      <!-- ========================================== -->
+      <section id="view-settings" class="hidden space-y-6">
+        <div>
+          <h3 class="text-xl font-bold text-navy tracking-tight">Settings & Integrations</h3>
+          <p class="text-sm text-[#7A7568] mt-1">Configure static analysis engine parameters, Nebius AI endpoints, and verification policies.</p>
+        </div>
+
+        <div class="space-y-5">
+          <!-- AI Provider Section -->
+          <div class="bg-white border border-[#E2DDD1] rounded-xl p-6 shadow-sm space-y-4">
+            <h4 class="font-semibold text-sm text-navy border-b border-[#F0ECE1] pb-2">NVIDIA + Nebius Token Factory Configuration</h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label class="text-[#7A7568] font-medium block">Inference Provider</label>
+                <input type="text" readonly value="Nebius Token Factory" class="w-full bg-[#FAFAF8] border border-[#E2DDD1] rounded px-3 py-2 text-navy mt-1">
+              </div>
+              <div>
+                <label class="text-[#7A7568] font-medium block">NVIDIA Open-Source Model</label>
+                <input type="text" readonly value="nvidia/llama-3.1-nemotron-70b-instruct" class="w-full bg-[#FAFAF8] border border-[#E2DDD1] rounded px-3 py-2 text-navy mt-1">
+              </div>
+              <div class="md:col-span-2">
+                <label class="text-[#7A7568] font-medium block">Inference API Endpoint</label>
+                <input type="text" readonly value="https://api.tokenfactory.nebius.ai/v1/chat/completions" class="w-full bg-[#FAFAF8] border border-[#E2DDD1] rounded px-3 py-2 text-navy font-mono mt-1">
+              </div>
+            </div>
+          </div>
+
+          <!-- Static Engine Settings -->
+          <div class="bg-white border border-[#E2DDD1] rounded-xl p-6 shadow-sm space-y-4">
+            <h4 class="font-semibold text-sm text-navy border-b border-[#F0ECE1] pb-2">Deterministic Rust Analyzer</h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label class="text-[#7A7568] font-medium block">Parser Framework</label>
+                <p class="font-semibold text-navy mt-1">Tree-Sitter Concrete Syntax Tree (CST)</p>
+              </div>
+              <div>
+                <label class="text-[#7A7568] font-medium block">Taint Analysis Mode</label>
+                <p class="font-semibold text-navy mt-1">Intra-procedural Variable Propagation Graph (VPG)</p>
+              </div>
+              <div>
+                <label class="text-[#7A7568] font-medium block">Pre-Patch AST Safety Guard</label>
+                <p class="text-pass-text font-semibold mt-1">Enabled (blocks restricted shell primitives)</p>
+              </div>
+              <div>
+                <label class="text-[#7A7568] font-medium block">Sandbox Isolation</label>
+                <p class="font-semibold text-navy mt-1">Ephemeral TempDir Workspace with Dropped Root</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- PROGRESSIVE FINDING DETAIL DRAWER / SLIDE-OVER               -->
+  <!-- ============================================================ -->
+  <div id="findingDrawerBackdrop" onclick="closeFindingDrawer()" class="fixed inset-0 bg-navy/20 backdrop-blur-sm z-50 hidden transition-opacity"></div>
+  
+  <div id="findingDrawer" class="fixed right-0 top-0 bottom-0 w-full max-w-2xl bg-white border-l border-[#E2DDD1] z-50 shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out">
+    
+    <!-- Drawer Header -->
+    <div class="p-6 border-b border-[#E2DDD1] flex items-start justify-between bg-[#FAFAF8]">
+      <div class="space-y-1">
+        <div class="flex items-center space-x-2">
+          <span id="drwSevBadge" class="text-xs px-2 py-0.5 rounded font-bold uppercase bg-high-bg text-high-text border border-high-border">HIGH</span>
+          <h3 id="drwTitle" class="text-base font-bold text-navy">SQL Injection</h3>
+          <span id="drwRuleId" class="text-xs px-2 py-0.5 rounded bg-champagne text-navy font-mono">SEC-001</span>
+        </div>
+        <p class="text-xs text-[#7A7568]">Location: <span id="drwLocation" class="font-mono text-sapphire font-medium">app.py:43</span> · Confidence: <span id="drwConfidence" class="font-semibold text-navy">95%</span></p>
       </div>
 
-      <!-- Vulnerability Breakdown -->
-      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-        <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Severity Breakdown</p>
-        <div class="flex items-center space-x-3 mt-2">
-          <div class="text-center">
-            <span id="critCount" class="text-xl font-bold text-red-500">1</span>
-            <p class="text-[10px] text-slate-500 uppercase">Crit</p>
-          </div>
-          <div class="text-center">
-            <span id="highCount" class="text-xl font-bold text-rose-400">5</span>
-            <p class="text-[10px] text-slate-500 uppercase">High</p>
-          </div>
-          <div class="text-center">
-            <span id="medCount" class="text-xl font-bold text-amber-400">2</span>
-            <p class="text-[10px] text-slate-500 uppercase">Med</p>
-          </div>
-          <div class="text-center">
-            <span id="lowCount" class="text-xl font-bold text-blue-400">0</span>
-            <p class="text-[10px] text-slate-500 uppercase">Low</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Scan Performance -->
-      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-        <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Static Core Performance</p>
-        <div class="flex items-baseline space-x-2 mt-1">
-          <span id="scanDuration" class="text-3xl font-extrabold text-emerald-400">17</span>
-          <span class="text-xs text-slate-500">ms</span>
-        </div>
-        <p class="text-xs text-slate-400 mt-1"><span id="filesCount">3</span> files | <span id="linesCount">129</span> LOC analyzed</p>
-      </div>
-
-      <!-- Agent Fix Status -->
-      <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-        <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Agent Verification Gate</p>
-        <div class="flex items-center space-x-2 mt-2">
-          <span id="gateBadge" class="px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold">
-            Ready to Remediate
-          </span>
-        </div>
-        <p class="text-xs text-slate-400 mt-1">Autonomous sandbox testing active</p>
-      </div>
+      <button onclick="closeFindingDrawer()" class="text-[#7A7568] hover:text-navy p-1.5 rounded-lg hover:bg-[#F0ECE1] transition">
+        <i class="fa-solid fa-xmark text-base"></i>
+      </button>
     </div>
 
-    <!-- Workspace Grid: Findings Column + Inspector Column -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <!-- Drawer Content (Progressive Disclosure) -->
+    <div class="p-6 overflow-y-auto custom-scroll flex-1 space-y-6 text-xs text-navy">
       
-      <!-- Findings List (5 cols) -->
-      <div class="lg:col-span-5 bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden flex flex-col">
-        <div class="p-3 border-b border-slate-800 bg-slate-900/80 flex items-center justify-between">
-          <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">Security Findings (<span id="totalFindings">8</span>)</span>
-          <span class="text-[11px] text-slate-500">Sorted by Severity</span>
+      <!-- 1. Concise Summary & Why it Matters -->
+      <div class="bg-[#FAFAF8] border border-[#E2DDD1] rounded-xl p-4 space-y-2">
+        <h4 class="font-semibold text-xs uppercase tracking-wider text-[#7A7568]">Vulnerability Summary</h4>
+        <p id="drwSummary" class="text-navy leading-relaxed">Unsanitized user parameter dynamically interpolated into database query string.</p>
+        <div class="pt-2 border-t border-[#E2DDD1] text-[#7A7568]">
+          <strong class="text-navy font-semibold">Recommended Fix:</strong>
+          <span id="drwFixRecommendation" class="ml-1">Use parameterized queries with placeholder syntax instead of string formatting.</span>
         </div>
-        <div id="findingsList" class="divide-y divide-slate-800/60 max-h-[640px] overflow-y-auto">
+      </div>
+
+      <!-- 2. Simplified Taint-Flow Visualization -->
+      <div class="space-y-2">
+        <h4 class="font-semibold text-xs uppercase tracking-wider text-[#7A7568]">Deterministic Taint Trace (Source → Propagation → Sink)</h4>
+        <div id="drwTaintContainer" class="bg-white border border-[#E2DDD1] rounded-xl p-4 space-y-3">
           <!-- Populated dynamically -->
         </div>
       </div>
 
-      <!-- Finding Inspector & Agent Workspace (7 cols) -->
-      <div class="lg:col-span-7 bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden p-6 space-y-6">
-        
-        <!-- Finding Header -->
-        <div class="flex items-start justify-between border-b border-slate-800/80 pb-4">
-          <div>
-            <div class="flex items-center space-x-2">
-              <span id="inspectorSevBadge" class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/30">HIGH</span>
-              <h2 id="inspectorTitle" class="text-lg font-bold text-slate-100">SQL Injection</h2>
-              <span id="inspectorRuleId" class="text-xs px-2 py-0.5 bg-slate-800 rounded text-slate-400 font-mono">SEC-001</span>
-            </div>
-            <p class="text-xs text-slate-400 mt-1">Location: <span id="inspectorLocation" class="text-cyan-400 font-mono">app.py:43</span> | Confidence: <span id="inspectorConfidence" class="text-emerald-400 font-semibold">95%</span></p>
-          </div>
+      <!-- 3. Guided Remediation Workflow (3 Logical Steps) -->
+      <div class="space-y-3 pt-2 border-t border-[#E2DDD1]">
+        <h4 class="font-semibold text-xs uppercase tracking-wider text-[#7A7568]">AI Remediation & Verification Workflow</h4>
 
-          <!-- Action Buttons -->
-          <div class="flex space-x-2">
-            <button onclick="requestExplanation()" class="bg-purple-600/30 hover:bg-purple-600/50 text-purple-300 border border-purple-500/40 text-xs px-3 py-1.5 rounded-lg flex items-center space-x-1 transition font-medium">
-              <i class="fa-solid fa-brain"></i>
-              <span>Explain</span>
-            </button>
-            <button onclick="requestFix()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs px-3 py-1.5 rounded-lg flex items-center space-x-1 transition font-medium">
-              <i class="fa-solid fa-wrench"></i>
-              <span>Patch</span>
-            </button>
-            <button onclick="requestVerification()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs px-3.5 py-1.5 rounded-lg flex items-center space-x-1 transition font-bold shadow-md shadow-emerald-600/20">
-              <i class="fa-solid fa-circle-check"></i>
-              <span>Verify & Fix</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Taint Graph Visualization -->
-        <div class="space-y-2">
+        <!-- Step 1: Understand (Explain) -->
+        <div class="border border-[#E2DDD1] rounded-xl p-4 bg-white space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">Deterministic Taint Flow Graph</span>
-            <span class="text-[11px] text-slate-500">Source → Propagation → Sink</span>
+            <span class="font-semibold text-navy flex items-center space-x-2">
+              <span class="w-5 h-5 rounded-full bg-sapphire text-white flex items-center justify-center text-[10px] font-bold">1</span>
+              <span>Step 1: Understand with NVIDIA Nemotron</span>
+            </span>
+            <button onclick="runExplainFinding()" id="btnDrwExplain" class="px-3 py-1 rounded bg-sapphire hover:bg-navy text-white text-xs font-medium transition">
+              Explain Finding
+            </button>
           </div>
-          <div id="taintFlowContainer" class="bg-slate-950 border border-slate-800 rounded-lg p-4 space-y-2">
-            <!-- Taint steps populated dynamically -->
+
+          <div id="drwExplainBox" class="hidden text-xs bg-[#FAFAF8] p-3 rounded-lg border border-[#E2DDD1] space-y-2">
+            <p><strong class="text-navy">Root Cause:</strong> <span id="drwExplainRoot" class="text-[#7A7568]">-</span></p>
+            <p><strong class="text-navy">Attack Vector:</strong> <span id="drwExplainAttack" class="text-high-text">-</span></p>
+            <p><strong class="text-navy">Business Impact:</strong> <span id="drwExplainImpact" class="text-[#7A7568]">-</span></p>
+            <!-- Telemetry -->
+            <div class="pt-2 border-t border-[#E2DDD1] flex items-center justify-between text-[11px] text-[#7A7568]">
+              <span>Provider: <strong class="text-sapphire">Nebius Token Factory</strong></span>
+              <span id="drwExplainTel">Latency: 120ms | 342 tokens</span>
+            </div>
           </div>
         </div>
 
-        <!-- AI Reasoning & Agent Validation Panel -->
-        <div class="space-y-4">
-          <!-- Tabs -->
-          <div class="flex space-x-2 border-b border-slate-800 text-xs">
-            <button id="tabReasoningBtn" onclick="switchTab('reasoning')" class="pb-2 px-3 border-b-2 border-purple-500 text-purple-300 font-semibold">NVIDIA Nemotron Reasoning</button>
-            <button id="tabPatchBtn" onclick="switchTab('patch')" class="pb-2 px-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200">Proposed Patch Diff</button>
-            <button id="tabVerifyBtn" onclick="switchTab('verify')" class="pb-2 px-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200">Sandbox Verification</button>
+        <!-- Step 2: Fix (Propose Patch) -->
+        <div class="border border-[#E2DDD1] rounded-xl p-4 bg-white space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-navy flex items-center space-x-2">
+              <span class="w-5 h-5 rounded-full bg-sapphire text-white flex items-center justify-center text-[10px] font-bold">2</span>
+              <span>Step 2: Propose Code Remediation</span>
+            </span>
+            <button onclick="runProposeFix()" id="btnDrwFix" class="px-3 py-1 rounded bg-navy hover:bg-sapphire text-white text-xs font-medium transition">
+              Propose Fix
+            </button>
           </div>
 
-          <!-- Tab 1: Reasoning -->
-          <div id="tabReasoning" class="space-y-3">
-            <div id="reasoningContent" class="text-xs text-slate-300 space-y-3 bg-slate-950 p-4 rounded-lg border border-slate-800">
-              <p><strong class="text-slate-200">Summary:</strong> <span id="resSummary">Click "Explain" to invoke NVIDIA Nemotron via Nebius Token Factory.</span></p>
-              <p><strong class="text-slate-200">Root Cause:</strong> <span id="resRootCause">-</span></p>
-              <p><strong class="text-slate-200">Attack Vector:</strong> <span id="resAttack" class="text-red-400">-</span></p>
-              <p><strong class="text-slate-200">Impact:</strong> <span id="resImpact" class="text-amber-400">-</span></p>
-            </div>
-            <!-- Telemetry Pill -->
-            <div id="telemetryBadge" class="hidden bg-purple-950/40 border border-purple-800/50 rounded-lg p-3 text-xs flex items-center justify-between">
-              <div class="flex items-center space-x-3 text-purple-300">
-                <i class="fa-solid fa-microchip"></i>
-                <span id="telModel">nvidia/llama-3.1-nemotron-70b-instruct</span>
-              </div>
-              <div class="flex items-center space-x-4 text-purple-400">
-                <span>Latency: <strong id="telLatency">120ms</strong></span>
-                <span>Tokens: <strong id="telTokens">342 in / 188 out</strong></span>
-              </div>
-            </div>
+          <div id="drwPatchBox" class="hidden space-y-2">
+            <p id="drwPatchExpl" class="text-xs text-[#7A7568] italic"></p>
+            <pre id="drwPatchDiff" class="text-xs text-pass-text bg-[#FAFAF8] p-3 rounded-lg border border-[#E2DDD1] font-mono overflow-x-auto"></pre>
+          </div>
+        </div>
+
+        <!-- Step 3: Verify (Sandbox Validation) -->
+        <div class="border border-[#E2DDD1] rounded-xl p-4 bg-white space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-navy flex items-center space-x-2">
+              <span class="w-5 h-5 rounded-full bg-sapphire text-white flex items-center justify-center text-[10px] font-bold">3</span>
+              <span>Step 3: Sandbox Verification & Gate</span>
+            </span>
+            <button onclick="runValidateFix()" id="btnDrwVerify" class="px-3 py-1.5 rounded bg-pass-text hover:opacity-90 text-white text-xs font-bold transition shadow-sm">
+              Validate Fix
+            </button>
           </div>
 
-          <!-- Tab 2: Patch Diff -->
-          <div id="tabPatch" class="hidden space-y-3">
-            <div class="bg-slate-950 p-4 rounded-lg border border-slate-800">
-              <p id="patchExplanation" class="text-xs text-slate-400 italic mb-3">Click "Patch" or "Verify & Fix" to generate code remediation.</p>
-              <pre id="patchDiff" class="text-xs text-emerald-400 font-mono bg-slate-900 p-3 rounded border border-slate-800 overflow-x-auto">// No patch generated yet</pre>
+          <div id="drwVerifyBox" class="hidden p-3 rounded-lg bg-[#FAFAF8] border border-[#E2DDD1] text-xs space-y-2">
+            <div class="flex items-center justify-between font-semibold">
+              <span>Validation Gate Decision:</span>
+              <span id="drwVerifyGateBadge" class="px-2 py-0.5 rounded bg-pass-bg text-pass-text border border-pass-border">VERIFIED (MERGE READY)</span>
             </div>
-          </div>
-
-          <!-- Tab 3: Sandbox Verification -->
-          <div id="tabVerify" class="hidden space-y-3">
-            <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-4">
-              <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-300">Verification Steps & Decision Policy:</span>
-                <span id="verifyStatusBadge" class="text-xs font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400">NOT STARTED</span>
-              </div>
-
-              <!-- Steps List -->
-              <div class="space-y-2 text-xs">
-                <div class="flex items-center space-x-2" id="vStep1">
-                  <i class="fa-regular fa-circle text-slate-500"></i>
-                  <span>1. Generate patch with NVIDIA Nemotron via Nebius Token Factory</span>
-                </div>
-                <div class="flex items-center space-x-2" id="vStep2">
-                  <i class="fa-regular fa-circle text-slate-500"></i>
-                  <span>2. Clone workspace to ephemeral sandbox & apply diff</span>
-                </div>
-                <div class="flex items-center space-x-2" id="vStep3">
-                  <i class="fa-regular fa-circle text-slate-500"></i>
-                  <span>3. Execute unit tests inside sandbox</span>
-                </div>
-                <div class="flex items-center space-x-2" id="vStep4">
-                  <i class="fa-regular fa-circle text-slate-500"></i>
-                  <span>4. Re-run SecScan deterministic taint engine</span>
-                </div>
-              </div>
-
-              <div id="verifyRationale" class="p-3 rounded bg-slate-900 border border-slate-800 text-xs text-slate-300 hidden">
-                <!-- Rationale message -->
-              </div>
+            <div class="space-y-1 text-[#7A7568]" id="drwVerifySteps">
+              <p>✔ Applied patch to isolated temporary workspace</p>
+              <p>✔ Executed unit test suite: <strong>Ran 2 tests in 0.150s (OK)</strong></p>
+              <p>✔ Re-scanned repository with SecScan static core: <strong>Vulnerability cleared</strong></p>
             </div>
+            <p id="drwVerifyRationale" class="text-navy font-medium pt-1 border-t border-[#E2DDD1]"></p>
           </div>
-
         </div>
 
       </div>
 
     </div>
 
-  </main>
+    <!-- Drawer Footer Actions -->
+    <div class="p-4 border-t border-[#E2DDD1] bg-[#FAFAF8] flex items-center justify-between">
+      <span class="text-xs text-[#7A7568]">SecScan Deterministic Security Protocol</span>
+      <button onclick="closeFindingDrawer()" class="px-4 py-2 rounded-lg bg-white border border-[#E2DDD1] hover:bg-champagne/30 text-xs font-medium text-navy transition">
+        Close Inspector
+      </button>
+    </div>
 
+  </div>
+
+
+  <!-- ============================================================ -->
+  <!-- SCRIPT LOGIC                                                 -->
+  <!-- ============================================================ -->
   <script>
-    let currentReport = null;
+    let activeReport = null;
     let selectedFinding = null;
+    let scanHistory = JSON.parse(localStorage.getItem('secscan_history') || '[]');
 
-    async function runScan() {
-      const path = document.getElementById('repoPath').value;
-      const btn = document.getElementById('scanBtn');
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Scanning...';
+    // Initial page setup
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchScanReport('test-corpus/vulnerable-shop');
+    });
+
+    function navigateTo(viewName) {
+      // Hide all views
+      ['overview', 'repositories', 'findings', 'history', 'settings'].forEach(v => {
+        document.getElementById('view-' + v).classList.add('hidden');
+        const navBtn = document.getElementById('nav-' + v);
+        navBtn.className = 'w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-[#7A7568] hover:text-navy hover:bg-[#F5F4F0] border-l-2 border-transparent transition';
+      });
+
+      // Show selected view
+      document.getElementById('view-' + viewName).classList.remove('hidden');
+      const activeNav = document.getElementById('nav-' + viewName);
+      activeNav.className = 'w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-navy bg-champagne/50 border-l-2 border-sapphire transition';
+
+      // Header title update
+      const titles = {
+        overview: 'Overview',
+        repositories: 'Repositories',
+        findings: 'Security Findings',
+        history: 'Scan History',
+        settings: 'Settings'
+      };
+      document.getElementById('headerPageTitle').innerText = titles[viewName];
+
+      if (viewName === 'history') {
+        renderHistoryTable();
+      }
+    }
+
+    async function fetchScanReport(path) {
+      const btn = document.getElementById('btnQuickScan');
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Scanning...</span>';
       btn.disabled = true;
 
       try {
@@ -281,213 +629,399 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ path })
         });
-        currentReport = await resp.json();
-        updateDashboard(currentReport);
+        activeReport = await resp.json();
+        
+        // Record into history
+        recordHistoryItem(activeReport);
+        updateAllViews(activeReport);
       } catch (e) {
-        alert('Scan failed: ' + e);
+        alert('Scan error: ' + e);
       } finally {
-        btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Scan Repository';
+        btn.innerHTML = '<i class="fa-solid fa-rotate w-3.5"></i><span>Scan Repository</span>';
         btn.disabled = false;
       }
     }
 
-    function updateDashboard(report) {
-      document.getElementById('scoreVal').innerText = report.security_score;
-      document.getElementById('scanDuration').innerText = report.scan_duration_ms;
-      document.getElementById('filesCount').innerText = report.files_scanned;
-      document.getElementById('linesCount').innerText = report.lines_analyzed;
-      document.getElementById('totalFindings').innerText = report.findings.length;
-
-      document.getElementById('critCount').innerText = report.severity_breakdown.CRITICAL || 0;
-      document.getElementById('highCount').innerText = report.severity_breakdown.HIGH || 0;
-      document.getElementById('medCount').innerText = report.severity_breakdown.MEDIUM || 0;
-      document.getElementById('lowCount').innerText = report.severity_breakdown.LOW || 0;
-
-      const scoreColor = report.security_score >= 80 ? 'text-emerald-400' : (report.security_score >= 50 ? 'text-amber-400' : 'text-red-500');
-      document.getElementById('scoreVal').className = 'text-3xl font-extrabold ' + scoreColor;
-      document.getElementById('scoreLabel').innerText = report.security_score >= 80 ? 'Security Gate: PASSED' : 'Security Gate: BLOCKED';
-      document.getElementById('scoreLabel').className = 'text-xs mt-1 ' + (report.security_score >= 80 ? 'text-emerald-400' : 'text-red-400');
-
-      renderFindingsList(report.findings);
-      if (report.findings.length > 0) {
-        selectFinding(report.findings[0]);
-      }
+    function triggerQuickScan() {
+      const currentPath = activeReport ? activeReport.repository_path : 'test-corpus/vulnerable-shop';
+      fetchScanReport(currentPath);
     }
 
-    function renderFindingsList(findings) {
-      const container = document.getElementById('findingsList');
+    function triggerDedicatedScan() {
+      const p = document.getElementById('scanInputPath').value.trim();
+      fetchScanReport(p || 'test-corpus/vulnerable-shop');
+    }
+
+    function setScanPreset(presetPath) {
+      document.getElementById('scanInputPath').value = presetPath;
+      fetchScanReport(presetPath);
+    }
+
+    function updateAllViews(report) {
+      document.getElementById('headerRepoBadge').innerText = report.repository_path;
+      document.getElementById('navFindingsBadge').innerText = report.findings.length;
+
+      // 1. Overview Updates
+      document.getElementById('ovScoreVal').innerText = report.security_score;
+      const gatePill = document.getElementById('ovScoreGatePill');
+      if (report.security_score >= 80) {
+        gatePill.className = 'text-xs px-2 py-0.5 rounded font-medium bg-pass-bg text-pass-text border border-pass-border';
+        gatePill.innerText = 'Gate: Passed';
+      } else {
+        gatePill.className = 'text-xs px-2 py-0.5 rounded font-medium bg-crit-bg text-crit-text border border-crit-border';
+        gatePill.innerText = 'Gate: Blocked';
+      }
+
+      document.getElementById('ovFindingsTotal').innerText = `${report.findings.length} Total`;
+      document.getElementById('ovCrit').innerText = `${report.severity_breakdown.CRITICAL || 0} Critical`;
+      document.getElementById('ovHigh').innerText = `${report.severity_breakdown.HIGH || 0} High`;
+      document.getElementById('ovMed').innerText = `${report.severity_breakdown.MEDIUM || 0} Medium`;
+      document.getElementById('ovLow').innerText = `${report.severity_breakdown.LOW || 0} Low`;
+
+      document.getElementById('ovDuration').innerText = `${report.scan_duration_ms}ms`;
+      document.getElementById('ovFilesLOC').innerText = `${report.files_scanned} files · ${report.lines_analyzed} LOC`;
+
+      // Render Priority Findings (Top 3)
+      renderOverviewPriority(report.findings);
+
+      // Render Findings View Table
+      renderFindingsTable(report.findings);
+
+      // Render Recent Scans in Overview
+      renderOverviewRecentScans();
+
+      // Show Feedback Box in Repositories tab
+      const fb = document.getElementById('scanFeedbackBox');
+      fb.classList.remove('hidden');
+      document.getElementById('scanFeedbackBody').innerText = `Discovered ${report.findings.length} security findings in ${report.scan_duration_ms}ms across ${report.files_scanned} files.`;
+    }
+
+    function renderOverviewPriority(findings) {
+      const container = document.getElementById('overviewPriorityList');
       container.innerHTML = '';
 
-      findings.forEach((f, idx) => {
-        const sevClass = f.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                         (f.severity === 'HIGH' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' : 'bg-amber-500/20 text-amber-400 border-amber-500/30');
-
-        const item = document.createElement('div');
-        item.className = 'p-3 hover:bg-slate-800/50 cursor-pointer transition flex items-start justify-between ' + (selectedFinding && selectedFinding.id === f.id ? 'bg-slate-800/70 border-l-2 border-emerald-500' : '');
-        item.onclick = () => selectFinding(f);
-
-        item.innerHTML = `
-          <div>
-            <div class="flex items-center space-x-2">
-              <span class="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase border ${sevClass}">${f.severity}</span>
-              <span class="text-xs font-semibold text-slate-200">${f.rule_name}</span>
-            </div>
-            <p class="text-[11px] text-slate-400 font-mono mt-1">${f.file_path}:${f.line}</p>
+      if (findings.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white border border-[#E2DDD1] rounded-xl p-5 text-center text-xs text-[#7A7568]">
+            <i class="fa-solid fa-circle-check text-pass-text text-lg mb-1 block"></i>
+            No priority security issues detected in active repository.
           </div>
-          <span class="text-[10px] text-slate-500 font-mono">${f.rule_id}</span>
         `;
-        container.appendChild(item);
+        return;
+      }
+
+      findings.slice(0, 3).forEach((f, idx) => {
+        const sevClass = getSevClass(f.severity);
+        const card = document.createElement('div');
+        card.className = 'bg-white border border-[#E2DDD1] rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm hover:border-sapphire/40 transition';
+        card.innerHTML = `
+          <div class="space-y-1">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs px-2 py-0.5 rounded font-bold uppercase ${sevClass.badge}">${f.severity}</span>
+              <h5 class="font-semibold text-sm text-navy">${f.rule_name}</h5>
+              <span class="text-xs font-mono text-[#7A7568]">${f.rule_id}</span>
+            </div>
+            <p class="text-xs text-[#7A7568]">File: <span class="font-mono text-sapphire">${f.file_path}:${f.line}</span> · ${f.recommended_fix}</p>
+          </div>
+          <button onclick="openFindingDetail('${f.id}')" class="px-3.5 py-1.5 rounded-lg bg-champagne/40 hover:bg-champagne text-navy text-xs font-semibold border border-[#D8D1C2] transition shrink-0">
+            Inspect Finding
+          </button>
+        `;
+        container.appendChild(card);
       });
     }
 
-    function selectFinding(f) {
-      selectedFinding = f;
-      renderFindingsList(currentReport.findings);
+    function renderFindingsTable(findings) {
+      const tbody = document.getElementById('findingsTableTbody');
+      tbody.innerHTML = '';
 
-      document.getElementById('inspectorTitle').innerText = f.rule_name;
-      document.getElementById('inspectorRuleId').innerText = f.rule_id;
-      document.getElementById('inspectorLocation').innerText = `${f.file_path}:${f.line}`;
-      document.getElementById('inspectorConfidence').innerText = `${Math.round(f.confidence * 100)}%`;
+      if (findings.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-6 text-center text-[#7A7568]">No security findings matching criteria.</td></tr>`;
+        return;
+      }
 
-      const sevBadge = document.getElementById('inspectorSevBadge');
-      sevBadge.innerText = f.severity;
-      sevBadge.className = f.severity === 'CRITICAL' ? 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-red-500/20 text-red-400 border border-red-500/30' :
-                           (f.severity === 'HIGH' ? 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30');
+      findings.forEach(f => {
+        const sevClass = getSevClass(f.severity);
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-[#FAFAF8] transition';
+        
+        let taintSummary = '-';
+        if (f.source && f.sink) {
+          taintSummary = `<span class="font-mono text-sapphire">${f.source.variable}</span> → <span class="font-mono text-navy font-semibold">${f.sink.variable}</span>`;
+        }
 
-      renderTaintFlow(f);
-      switchTab('reasoning');
+        tr.innerHTML = `
+          <td class="px-5 py-3.5"><span class="text-xs px-2 py-0.5 rounded font-bold uppercase ${sevClass.badge}">${f.severity}</span></td>
+          <td class="px-5 py-3.5 font-semibold text-navy">${f.rule_name}</td>
+          <td class="px-5 py-3.5 font-mono text-[#7A7568]">${f.rule_id}</td>
+          <td class="px-5 py-3.5 font-mono text-sapphire">${f.file_path}:${f.line}</td>
+          <td class="px-5 py-3.5 font-semibold">${Math.round(f.confidence * 100)}%</td>
+          <td class="px-5 py-3.5">${taintSummary}</td>
+          <td class="px-5 py-3.5 text-right">
+            <button onclick="openFindingDetail('${f.id}')" class="px-3 py-1 rounded bg-[#FAFAF8] hover:bg-champagne/60 border border-[#E2DDD1] text-xs font-medium text-navy transition">
+              Inspect
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
 
-    function renderTaintFlow(f) {
-      const container = document.getElementById('taintFlowContainer');
+    function filterFindings() {
+      const query = document.getElementById('findingSearchInput').value.toLowerCase();
+      const sev = document.getElementById('severitySelectFilter').value;
+
+      const filtered = (activeReport ? activeReport.findings : []).filter(f => {
+        const matchesQuery = f.rule_name.toLowerCase().includes(query) || f.file_path.toLowerCase().includes(query) || f.rule_id.toLowerCase().includes(query);
+        const matchesSev = (sev === 'ALL') || (f.severity === sev);
+        return matchesQuery && matchesSev;
+      });
+
+      renderFindingsTable(filtered);
+    }
+
+    function openFindingDetail(findingId) {
+      if (!activeReport) return;
+      selectedFinding = activeReport.findings.find(f => f.id === findingId);
+      if (!selectedFinding) return;
+
+      const sevClass = getSevClass(selectedFinding.severity);
+      const b = document.getElementById('drwSevBadge');
+      b.className = `text-xs px-2 py-0.5 rounded font-bold uppercase ${sevClass.badge}`;
+      b.innerText = selectedFinding.severity;
+
+      document.getElementById('drwTitle').innerText = selectedFinding.rule_name;
+      document.getElementById('drwRuleId').innerText = selectedFinding.rule_id;
+      document.getElementById('drwLocation').innerText = `${selectedFinding.file_path}:${selectedFinding.line}`;
+      document.getElementById('drwConfidence').innerText = `${Math.round(selectedFinding.confidence * 100)}%`;
+      document.getElementById('drwFixRecommendation').innerText = selectedFinding.recommended_fix;
+
+      renderDrawerTaint(selectedFinding);
+
+      // Reset AI workflow steps
+      document.getElementById('drwExplainBox').classList.add('hidden');
+      document.getElementById('drwPatchBox').classList.add('hidden');
+      document.getElementById('drwVerifyBox').classList.add('hidden');
+
+      // Open drawer
+      document.getElementById('findingDrawerBackdrop').classList.remove('hidden');
+      document.getElementById('findingDrawer').classList.remove('translate-x-full');
+    }
+
+    function closeFindingDrawer() {
+      document.getElementById('findingDrawer').classList.add('translate-x-full');
+      document.getElementById('findingDrawerBackdrop').classList.add('hidden');
+    }
+
+    function renderDrawerTaint(f) {
+      const container = document.getElementById('drwTaintContainer');
       container.innerHTML = '';
 
       if (!f.source && !f.sink && f.propagation.length === 0) {
-        container.innerHTML = `<div class="text-xs text-slate-400 font-mono p-2 bg-slate-900 rounded border border-slate-800">${f.code_snippet}</div>`;
+        container.innerHTML = `<div class="p-3 rounded-lg bg-[#FAFAF8] border border-[#E2DDD1] text-xs font-mono text-navy">${f.code_snippet}</div>`;
         return;
       }
 
       if (f.source) {
         container.innerHTML += `
-          <div class="bg-red-950/30 border border-red-900/50 p-2.5 rounded text-xs flex items-center justify-between">
-            <span class="font-bold text-red-400">[SOURCE] Line ${f.source.line}</span>
-            <span class="font-mono text-red-300">${f.source.variable}</span>
+          <div class="p-3 rounded-lg bg-high-bg border border-high-border flex items-center justify-between text-xs">
+            <span class="font-bold text-high-text">[SOURCE] Line ${f.source.line}</span>
+            <span class="font-mono text-navy font-semibold">${f.source.variable}</span>
           </div>
         `;
       }
 
       f.propagation.forEach(p => {
         container.innerHTML += `
-          <div class="text-center text-slate-600 text-xs"><i class="fa-solid fa-arrow-down"></i></div>
-          <div class="bg-amber-950/30 border border-amber-900/50 p-2 rounded text-xs flex items-center justify-between">
-            <span class="font-semibold text-amber-400">[PROPAGATION] Line ${p.line}</span>
-            <span class="font-mono text-amber-300">${p.variable}</span>
+          <div class="text-center text-[#BEB7A7] text-xs"><i class="fa-solid fa-arrow-down"></i></div>
+          <div class="p-2.5 rounded-lg bg-med-bg border border-med-border flex items-center justify-between text-xs">
+            <span class="font-semibold text-med-text">[PROPAGATION] Line ${p.line}</span>
+            <span class="font-mono text-navy">${p.variable}</span>
           </div>
         `;
       });
 
       if (f.sink) {
         container.innerHTML += `
-          <div class="text-center text-slate-600 text-xs"><i class="fa-solid fa-arrow-down"></i></div>
-          <div class="bg-rose-950/40 border border-rose-900/60 p-2.5 rounded text-xs flex items-center justify-between">
-            <span class="font-bold text-rose-400">[SINK] Line ${f.sink.line}</span>
-            <span class="font-mono text-rose-300 font-semibold">${f.sink.variable}</span>
+          <div class="text-center text-[#BEB7A7] text-xs"><i class="fa-solid fa-arrow-down"></i></div>
+          <div class="p-3 rounded-lg bg-crit-bg border border-crit-border flex items-center justify-between text-xs">
+            <span class="font-bold text-crit-text">[SINK] Line ${f.sink.line}</span>
+            <span class="font-mono text-navy font-bold">${f.sink.variable}</span>
           </div>
         `;
       }
     }
 
-    async function requestExplanation() {
+    async function runExplainFinding() {
       if (!selectedFinding) return;
-      switchTab('reasoning');
-      document.getElementById('resSummary').innerText = 'Analyzing evidence with NVIDIA Nemotron...';
+      const btn = document.getElementById('btnDrwExplain');
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Reasoning...</span>';
+      btn.disabled = true;
 
-      const resp = await fetch('/api/explain', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: currentReport.repository_path, rule_id: selectedFinding.rule_id })
-      });
-      const data = await resp.json();
+      try {
+        const resp = await fetch('/api/explain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: activeReport.repository_path, rule_id: selectedFinding.rule_id })
+        });
+        const data = await resp.json();
 
-      document.getElementById('resSummary').innerText = data.summary;
-      document.getElementById('resRootCause').innerText = data.root_cause;
-      document.getElementById('resAttack').innerText = data.attack_vector;
-      document.getElementById('resImpact').innerText = data.business_impact;
-
-      const tel = document.getElementById('telemetryBadge');
-      tel.classList.remove('hidden');
-      document.getElementById('telModel').innerText = data.telemetry.model;
-      document.getElementById('telLatency').innerText = `${data.telemetry.latency_ms}ms`;
-      document.getElementById('telTokens').innerText = `${data.telemetry.input_tokens} in / ${data.telemetry.output_tokens} out`;
+        const box = document.getElementById('drwExplainBox');
+        box.classList.remove('hidden');
+        document.getElementById('drwExplainRoot').innerText = data.root_cause;
+        document.getElementById('drwExplainAttack').innerText = data.attack_vector;
+        document.getElementById('drwExplainImpact').innerText = data.business_impact;
+        document.getElementById('drwExplainTel').innerText = `Latency: ${data.telemetry.latency_ms}ms | ${data.telemetry.input_tokens} in / ${data.telemetry.output_tokens} out`;
+      } catch (e) {
+        alert('Reasoning error: ' + e);
+      } finally {
+        btn.innerHTML = 'Explain Finding';
+        btn.disabled = false;
+      }
     }
 
-    async function requestFix() {
+    async function runProposeFix() {
       if (!selectedFinding) return;
-      switchTab('patch');
-      document.getElementById('patchExplanation').innerText = 'Generating safe remediation with NVIDIA Nemotron...';
+      const btn = document.getElementById('btnDrwFix');
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Generating...</span>';
+      btn.disabled = true;
 
-      const resp = await fetch('/api/fix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: currentReport.repository_path, rule_id: selectedFinding.rule_id })
-      });
-      const data = await resp.json();
+      try {
+        const resp = await fetch('/api/fix', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: activeReport.repository_path, rule_id: selectedFinding.rule_id })
+        });
+        const data = await resp.json();
 
-      document.getElementById('patchExplanation').innerText = data.explanation;
-      document.getElementById('patchDiff').innerText = data.unified_diff;
+        const box = document.getElementById('drwPatchBox');
+        box.classList.remove('hidden');
+        document.getElementById('drwPatchExpl').innerText = data.explanation;
+        document.getElementById('drwPatchDiff').innerText = data.unified_diff;
+      } catch (e) {
+        alert('Patch error: ' + e);
+      } finally {
+        btn.innerHTML = 'Propose Fix';
+        btn.disabled = false;
+      }
     }
 
-    async function requestVerification() {
+    async function runValidateFix() {
       if (!selectedFinding) return;
-      switchTab('verify');
-      const badge = document.getElementById('verifyStatusBadge');
-      badge.innerText = 'VALIDATING...';
-      badge.className = 'text-xs font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300';
+      const btn = document.getElementById('btnDrwVerify');
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Validating in Sandbox...</span>';
+      btn.disabled = true;
 
-      const setStep = (id, iconClass, textClass) => {
-        const el = document.getElementById(id);
-        el.querySelector('i').className = iconClass;
-        el.className = 'flex items-center space-x-2 ' + textClass;
+      try {
+        const resp = await fetch('/api/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: activeReport.repository_path, rule_id: selectedFinding.rule_id })
+        });
+        const data = await resp.json();
+
+        const box = document.getElementById('drwVerifyBox');
+        box.classList.remove('hidden');
+
+        const badge = document.getElementById('drwVerifyGateBadge');
+        if (data.status === 'VALIDATED') {
+          badge.innerText = 'VERIFIED (MERGE READY)';
+          badge.className = 'px-2 py-0.5 rounded bg-pass-bg text-pass-text border border-pass-border font-bold';
+        } else {
+          badge.innerText = 'REJECTED (TESTS FAILED)';
+          badge.className = 'px-2 py-0.5 rounded bg-crit-bg text-crit-text border border-crit-border font-bold';
+        }
+
+        document.getElementById('drwVerifyRationale').innerText = data.decision_rationale;
+      } catch (e) {
+        alert('Validation error: ' + e);
+      } finally {
+        btn.innerHTML = 'Validate Fix';
+        btn.disabled = false;
+      }
+    }
+
+    function recordHistoryItem(report) {
+      const item = {
+        repository: report.repository_path,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' }),
+        findingsCount: report.findings.length,
+        score: report.security_score,
+        duration: `${report.scan_duration_ms}ms`,
+        status: report.security_score >= 80 ? 'Passed' : 'Blocked'
       };
+      scanHistory.unshift(item);
+      if (scanHistory.length > 20) scanHistory.pop();
+      localStorage.setItem('secscan_history', JSON.stringify(scanHistory));
+    }
 
-      setStep('vStep1', 'fa-solid fa-spinner fa-spin text-purple-400', 'text-purple-300');
-      
-      const resp = await fetch('/api/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: currentReport.repository_path, rule_id: selectedFinding.rule_id })
-      });
-      const data = await resp.json();
+    function renderOverviewRecentScans() {
+      const tbody = document.getElementById('overviewRecentScansTbody');
+      tbody.innerHTML = '';
 
-      setStep('vStep1', 'fa-solid fa-circle-check text-emerald-400', 'text-emerald-300');
-      setStep('vStep2', 'fa-solid fa-circle-check text-emerald-400', 'text-emerald-300');
-      setStep('vStep3', data.tests_passed ? 'fa-solid fa-circle-check text-emerald-400' : 'fa-solid fa-circle-xmark text-red-400', data.tests_passed ? 'text-emerald-300' : 'text-red-300');
-      setStep('vStep4', data.original_vulnerability_cleared ? 'fa-solid fa-circle-check text-emerald-400' : 'fa-solid fa-circle-xmark text-red-400', data.original_vulnerability_cleared ? 'text-emerald-300' : 'text-red-300');
-
-      if (data.status === 'VALIDATED') {
-        badge.innerText = '✔ VALIDATED (MERGE READY)';
-        badge.className = 'text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
-      } else {
-        badge.innerText = '❌ REJECTED';
-        badge.className = 'text-xs font-bold px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30';
+      if (scanHistory.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-5 py-4 text-center text-[#7A7568]">No previous scans recorded.</td></tr>`;
+        return;
       }
 
-      const rat = document.getElementById('verifyRationale');
-      rat.classList.remove('hidden');
-      rat.innerText = data.decision_rationale;
-    }
-
-    function switchTab(tab) {
-      ['reasoning', 'patch', 'verify'].forEach(t => {
-        document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('hidden');
-        document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1) + 'Btn').className = 'pb-2 px-3 border-b-2 border-transparent text-slate-400 hover:text-slate-200';
+      scanHistory.slice(0, 4).forEach(item => {
+        const statusClass = item.status === 'Passed' ? 'bg-pass-bg text-pass-text border-pass-border' : 'bg-crit-bg text-crit-text border-crit-border';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="px-5 py-3 font-mono text-sapphire">${item.repository}</td>
+          <td class="px-5 py-3 text-[#7A7568]">${item.timestamp}</td>
+          <td class="px-5 py-3 font-semibold text-navy">${item.findingsCount} issues</td>
+          <td class="px-5 py-3 font-bold">${item.score}/100</td>
+          <td class="px-5 py-3"><span class="text-xs px-2 py-0.5 rounded border ${statusClass}">${item.status}</span></td>
+          <td class="px-5 py-3 text-right">
+            <button onclick="fetchScanReport('${item.repository}')" class="text-xs text-sapphire hover:text-navy font-medium">Re-scan</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
       });
-      document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('hidden');
-      document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Btn').className = 'pb-2 px-3 border-b-2 border-purple-500 text-purple-300 font-semibold';
     }
 
-    // Auto-run initial scan on page load
-    window.onload = () => runScan();
+    function renderHistoryTable() {
+      const tbody = document.getElementById('scanHistoryTableTbody');
+      tbody.innerHTML = '';
+
+      if (scanHistory.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="px-5 py-6 text-center text-[#7A7568]">No previous scan runs found in history.</td></tr>`;
+        return;
+      }
+
+      scanHistory.forEach(item => {
+        const statusClass = item.status === 'Passed' ? 'bg-pass-bg text-pass-text border-pass-border' : 'bg-crit-bg text-crit-text border-crit-border';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="px-5 py-3.5 font-mono text-sapphire">${item.repository}</td>
+          <td class="px-5 py-3.5 text-[#7A7568]">${item.timestamp}</td>
+          <td class="px-5 py-3.5 font-bold">${item.score}/100</td>
+          <td class="px-5 py-3.5 font-semibold text-navy">${item.findingsCount} findings</td>
+          <td class="px-5 py-3.5 text-[#7A7568]">${item.duration}</td>
+          <td class="px-5 py-3.5"><span class="text-xs px-2 py-0.5 rounded border ${statusClass}">${item.status}</span></td>
+          <td class="px-5 py-3.5 text-right">
+            <button onclick="fetchScanReport('${item.repository}')" class="px-3 py-1 rounded bg-white hover:bg-champagne/40 border border-[#E2DDD1] text-xs font-medium text-navy transition">
+              Load Report
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function getSevClass(sev) {
+      switch (sev) {
+        case 'CRITICAL':
+          return { badge: 'bg-crit-bg text-crit-text border border-crit-border' };
+        case 'HIGH':
+          return { badge: 'bg-high-bg text-high-text border border-high-border' };
+        case 'MEDIUM':
+          return { badge: 'bg-med-bg text-med-text border border-med-border' };
+        default:
+          return { badge: 'bg-low-bg text-low-text border border-low-border' };
+      }
+    }
   </script>
 </body>
 </html>
