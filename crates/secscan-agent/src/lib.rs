@@ -1,4 +1,5 @@
-// Security Fix Agent loop: Apply patch -> Sandboxed tests -> Rescan -> Verify
-pub fn init() {
-    println!("Security Fix Agent initialized");
-}
+pub mod models;
+pub mod validator;
+
+pub use models::{ValidationReport, ValidationStatus};
+pub use validator::AgentValidator;

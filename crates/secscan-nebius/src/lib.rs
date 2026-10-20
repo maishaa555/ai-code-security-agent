@@ -1,4 +1,6 @@
-// Nebius Token Factory & NVIDIA Nemotron Integration
-pub fn init() {
-    println!("Nebius Token Factory client initialized");
-}
+pub mod client;
+pub mod models;
+pub mod prompts;
+
+pub use client::NebiusClient;
+pub use models::{AiExplanation, AiPatch, NebiusTelemetry};
