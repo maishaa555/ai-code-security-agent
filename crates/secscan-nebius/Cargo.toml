@@ -1,0 +1,13 @@
+[package]
+name = "secscan-nebius"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+secscan-core = { path = "../secscan-core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { version = "0.11", features = ["json", "stream"] }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }

@@ -1,0 +1,13 @@
+[package]
+name = "secscan-agent"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+secscan-core = { path = "../secscan-core" }
+secscan-nebius = { path = "../secscan-nebius" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tempfile = "3.8"

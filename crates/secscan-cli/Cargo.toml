@@ -1,0 +1,15 @@
+[package]
+name = "secscan-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "secscan"
+path = "src/main.rs"
+
+[dependencies]
+secscan-core = { path = "../secscan-core" }
+clap = { version = "4.4", features = ["derive"] }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+colored = "2.1"
