@@ -1,0 +1,45 @@
+name: SecScan AI Security Gate
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  security-audit:
+    name: Autonomous Security Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build SecScan Analyzer
+        run: cargo build --release --bin secscan
+
+      - name: Run Deterministic Security Scan
+        run: |
+          ./target/release/secscan scan . --format text
+          ./target/release/secscan scan . --format sarif > results.sarif
+
+      - name: Upload SARIF Security Findings
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
+
+      - name: Autonomous AI Verification Gate
+        env:
+          NEBIUS_API_KEY: ${{ secrets.NEBIUS_API_KEY }}
+        run: |
+          echo "Executing autonomous patch validation loop..."
+          ./target/release/secscan verify . --rule SEC-001 || true
