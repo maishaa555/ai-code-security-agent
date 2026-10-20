@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  secscan:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NEBIUS_API_KEY=${NEBIUS_API_KEY:-}
+      - NEBIUS_MODEL=${NEBIUS_MODEL:-nvidia/llama-3.1-nemotron-70b-instruct}
+      - RUST_LOG=info
+    restart: unless-stopped
