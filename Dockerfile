@@ -1,18 +1,18 @@
-# Build stage using Rust
-FROM rust:1.80-slim as builder
+# Build stage using latest stable Rust
+FROM rust:latest as builder
 
 WORKDIR /app
 COPY . .
 
-# Install build dependencies including pkg-config and libssl-dev
-RUN apt-get update && apt-get install -y gcc g++ make curl pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
+# Install essential build tools, pkg-config, and OpenSSL headers
+RUN apt-get update && apt-get install -y build-essential pkg-config libssl-dev curl && rm -rf /var/lib/apt/lists/*
 
-# Constrain parallel jobs to prevent OOM in low-memory container builds (e.g. Render Free Tier)
+# Strict single-job memory limit to prevent OOM in Render Free Tier
 ENV CARGO_BUILD_JOBS=1
 ENV RUSTFLAGS="-C codegen-units=1"
 
 # Build binary
-RUN cargo build --release --bin secscan-server
+RUN cargo build --release -j 1 --bin secscan-server
 
 # Runtime stage
 FROM python:3.12-slim
